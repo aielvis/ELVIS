@@ -284,21 +284,20 @@ class LeaseBasedFeatures(HasStrictTraits):
         """ The lease data contains the "water depth", but for the first time a
             block is leased, this information maybe unknown.
         """
-        has_data = [blk for blk in self._nn.keys() if blk in leases.index] 
+        
+        
+        has_data = [blk for blk in self._nn.keys() if blk in leases.index]        
         if len(has_data) < 1:
             # unknow depth, we loose this data point.
             return np.nan
 
         # water depth needs to be properly normalized; it's not weighted
-        # in the sense of a price, we really just want the average depth
-        # in a region.
-        norm = np.sum([val for blk,val in self._nn.items() if blk in
-                       leases.index])
+        # in the sense of a price, we really just want the average depth in a region.
+        norm = np.sum([val for blk,val in self._nn.items() if blk in leases.index])
         
-        depth = np.sum([leases.loc[blk,
-                           "Block Max Water Depth (meters)"].max()*val
-                              for blk,val in self._nn.items() if 
-                                  blk in leases.index])/norm
+        depth = np.sum([leases.loc[blk, "Block Max Water Depth (meters)"].max()*val
+                           for blk,val in self._nn.items() if 
+                               blk in leases.index])/norm
         
         return depth
     
@@ -328,8 +327,7 @@ class LeaseBasedFeatures(HasStrictTraits):
             return 0.
         
 class BidData(HasStrictTraits):
-    """ Generates a rolling set of "bids" for training models 
-        in a backtesting.
+    """
     """
     periods = Instance(pd.PeriodIndex)
     auctions = Array
@@ -406,10 +404,9 @@ class BidData(HasStrictTraits):
 
 def explanatory_vars(lbf, leases, bid_data,
                      wells, qdata, platform_structures, period):
-    """ Generates a set of explanatory variables for each lease block. 
-        Be sure to hide information in "leases" etc to prevent looking 
-        forward in case of backtesting."""
-    
+    """ Generates a rolling set of data with these explanatory vars.
+        Suggest saving the result to disk and reloading for training/prediction.
+    """
     return (lbf.rolling_relinquished_well(leases, wells, period),
             lbf.rolling_relinquished(leases, period),
             lbf.open_blocks(leases, period),
