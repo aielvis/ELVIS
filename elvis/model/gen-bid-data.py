@@ -112,37 +112,66 @@ def run(mini, maxi):
             continue
 
         period, _leases, mlot = val
+        # filter by water depth
+        indx = leases["Block Max Water Depth (meters)"] > 1000
+        _leases = _leases[indx]
 
-        area_blocks = mlot.index.get_level_values(0).values
-        # everything in a 20-mile radius of every block bid on
-        aoi = list(chain(*[list(lbfs[blk]._nn.keys()) for blk in area_blocks]))
+        # figure out which blocks are currently open:
+        indx = np.logical_or(_leases["Lease Expiration Date"].isna(), 
+                             _leases["Lease Expiration Date"] > period)
+        # figure out which blocks have a lease associated with it.
+        # holding the auction has pruned all leases with an effective
+        # data after the current period (i.e. the future!).
+        has_leases = np.unique(_leases.index[indx].get_level_values(0))
+        
+        # throw a net around every block with a lease right now
+        aoi = list(chain(*[list(lbfs[blk]._nn.keys()) for blk in has_leases]))
         aoi = np.unique(aoi)
-
+        
+        #
         result = [explanatory_vars(lbfs[arr], _leases, bid_data,
-                                   wells, qdata, platform_structures, period) for 
+                                   wells, qdata, platform_structures,
+                                   period) for 
                   arr in tqdm.tqdm(aoi)]
         #
-        X = np.vstack(result)
-
+        X = pd.DataFrame(data=np.vstack(result), index=aoi, columns=features)
+        X.index.names = ["AREABLK"]
+        
         has_bid = [i in mlot.index.get_level_values(0) for i in aoi]
-        
-        bid = np.zeros(len(has_bid))
-        bid[:] = -1
-        bid[has_bid] = [mlot.loc[i,"BID"].values[0] for i in aoi if i in 
-                        mlot.index.get_level_values(0)]
+
+        _bid = np.zeros(len(has_bid))
+        _mlot = np.zeros(len(has_bid))
+        _mrov = np.zeros(len(has_bid))
+
+        _bid[:] = np.nan
+        _mlot[:] = np.nan
+        _mrov[:] = np.nan
+
+        #
+        _bid[has_bid] = [mlot.loc[i,"BID"].values[0] for i in aoi if i in 
+                         mlot.index.get_level_values(0)]
+        _mlot[has_bid] = [mlot.loc[i,"MLOT"].values[0] for i in aoi if i in 
+                          mlot.index.get_level_values(0)]
+        _mrov[has_bid] = [mlot.loc[i,"MROV"].values[0] for i in aoi if i in 
+                          mlot.index.get_level_values(0)]
+
         has_bid = np.int_(has_bid)
+        #
         
-        # if we couldn't figure it out:
-        indx = ~np.any(np.isnan(X), axis=1)
-        X = X[indx,:]
-        bid = bid[indx]
-        has_bid = has_bid[indx]
+        X["HasBid"] = has_bid
         
+        #
+        X["Bid"] = _bid
+        X["MLOT"] = _mlot
+        X["MROV"] = _mrov
+        
+        X["Has Lease"] = 0
+        X.loc[has_leases, "Has Lease"] = 1
+
         # use the "i" index for the lease auction to reloade over time.
-        np.save(join(base_directory, "bid-model-1", "X-{}.npy".format(i)),X)
-        np.save(join(base_directory, "bid-model-1", "bid-{}.npy".format(i)),bid)
-        np.save(join(base_directory, "bid-model-1", "has_bid-{}.npy".format(i)),has_bid)    
-        mlot.to_csv(join(base_directory, "bid-model-1", "bids-{}.csv".format(i)))    
+        X.to_csv(join(base_directory, "bid-model-1",
+                               "training-{}.csv".format(i)))    
+        
     
 if __name__ == "__main__":
     run()
