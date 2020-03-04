@@ -1,6 +1,5 @@
-""" Convenience functions for loading BOEM data.
+""" Convenience functions for loading shapefile into Jupyter
 """
-
 from os.path import join
 import json
 import re
@@ -534,14 +533,11 @@ def _load_production_data(filename):
     boem_production_by_block = pd.read_csv(filename, low_memory=False)
     indx = np.logical_or(boem_production_by_block["Production Month"].isna(),
                          boem_production_by_block["Production Month"].isna())
-    boem_production_by_block.drop(boem_production_by_block.index[indx],
-                                  inplace=True)
-    boem_production_by_block["Production Date"] = \
-                                production_dates(boem_production_by_block)
+    boem_production_by_block.drop(boem_production_by_block.index[indx], inplace=True)
+    boem_production_by_block["Production Date"] = production_dates(boem_production_by_block)
     
     for key, val in boem_production_by_block_dtypes.items():
-        boem_production_by_block[key] = \
-                            boem_production_by_block[key].astype(val)
+        boem_production_by_block[key] = boem_production_by_block[key].astype(val)
 
     boem_production_by_block.set_index("Lease Number", inplace=True)
     return boem_production_by_block
@@ -881,15 +877,15 @@ def read_curated_neighbourhoods(base_directory):
     nn.drop(columns=["Area Code", "Block Number"], inplace=True)
     nn.sort_values(["AREABLK","AREABLK_NN"], inplace=True)
     nn.set_index(["AREABLK", "AREABLK_NN", "Lease Number"], inplace=True)
-    nn.sort_values(["AREABLK_NN", "Lease Effective Date"],
-                   ascending=False,inplace=True)
+    nn.sort_values(["AREABLK_NN", "Lease Effective Date"],ascending=False,inplace=True)
     nn.sort_index(level=0,inplace=True)
 
     return nn
 
+
 def create_nn_data():
     """
-    Expensive, so just make it and save it to disk. 
+    Expensive, so just make it an save it to disk. 
     """
     nn_dtypes = {"Block Max Water Depth (meters)" : int}
     nn_dates = ["Lease Effective Date", "Lease Expiration Date"]
@@ -902,10 +898,8 @@ def create_nn_data():
     nn.drop(columns=["Area Code", "Block Number"], inplace=True)
     nn.sort_values(["AREABLK","AREABLK_NN"], inplace=True)
     nn.set_index(["AREABLK", "AREABLK_NN", "Lease Number"], inplace=True)
-    nn["Lease Effective Date"] = \
-                    nn["Lease Effective Date"].dt.to_period(period_size)
-    nn["Lease Expiration Date"] = \
-                    nn["Lease Expiration Date"].dt.to_period(period_size)
+    nn["Lease Effective Date"] = nn["Lease Effective Date"].dt.to_period(period_size)
+    nn["Lease Expiration Date"] = nn["Lease Expiration Date"].dt.to_period(period_size)
 
 
 def load_num_wells(base_directory, period_size="Q", code=None):
