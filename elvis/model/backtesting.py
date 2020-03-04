@@ -329,20 +329,22 @@ class LeaseBasedFeatures(HasStrictTraits):
 class BidData(HasStrictTraits):
     """
     """
-    periods = Instance(pd.PeriodIndex)
-    auctions = Array
-    
     bid_data = Instance(pd.DataFrame)
-    
+    start_period = Instance(pd.Period)
+    auctions = Array
+        
     #If you want to back-date information so you can't see anything 
     #up to the previous quarter.
     backdate = Bool(False)
-    start_period = pd.Period(pd.datetime(2003,1,1), "Q")
 
     def __init__(self, **kwargs):
-        # 
-        super().__init__(**kwargs)        
+        #        
+        super().__init__(**kwargs)
+
+        #
         self.auctions = np.unique(self.bid_data["SALEDATE"])
+        if "start_period" not in kwargs.keys():
+            self.start_period = pd.Period(pd.datetime(2003,1,1), "Q")
     
     def hold_auctions(self, leases, period_size='Q'):
         """
